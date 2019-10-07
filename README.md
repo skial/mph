@@ -1,0 +1,2 @@
+# mph
+Minimal Perfect Hashing
