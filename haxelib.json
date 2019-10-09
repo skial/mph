@@ -1,0 +1,12 @@
+{
+    "name": "mph",
+    "license": "MIT",
+    "classPath": "src",
+    "tags": ["minimal perfect hash", "mph", "hash", "hashing", "minimal perfect hashing", "perfect hash"],
+    "description": "Minimal Perfect Hashing",
+    "contributors": ["skial"],
+    "releasenote": "Initial Release",
+    "version": "0.0.1-alpha",
+    "url": "https://github.com/skial/mp",
+    "dependencies": {}
+  }
