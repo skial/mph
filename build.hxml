@@ -1,0 +1,28 @@
+-cp src
+-cp test
+
+-debug
+-dce full
+-D analyzer-optimize
+-main Entry
+
+--each
+
+-lib hxnodejs
+-js bin/mph.js
+
+--next
+
+-hl bin/mph.hl
+
+--next
+
+-neko bin/mph.n
+
+--next
+
+-php bin/php
+
+--next 
+
+--interp

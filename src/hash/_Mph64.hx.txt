@@ -1,0 +1,140 @@
+package hash;
+
+import haxe.ds.ArraySort;
+import haxe.Int64;
+import haxe.ds.Vector;
+
+using haxe.Int64;
+using StringTools;
+using be.Constant;
+
+typedef Table<Key, Value> = {
+    keys:Vector<Null<Key>>,
+    values:Vector<Value>,
+}
+
+class Mph64 {
+
+    public function new() {}
+
+
+    public function hash(d:Int64, value:String):Int64 {
+        if (d == 0) {
+            d = Int64.fromFloat(Std.parseInt('0x811c9dc5'));
+            //trace( d.toStr());
+            trace( d, Ints.MAX );
+        }
+        //trace( value, value.length, d );
+        for (i in 0...value.length) {
+            //trace( i, value.fastCodeAt(i), d );
+            //trace(d << 1) ;
+            //trace(d << 4) ;
+            //trace(d << 7) ;
+            //trace(d << 8) ;
+            //trace(d << 24);
+            d += (d << 1) + (d << 4) + (d << 7) + (d << 8) + (d << 24);
+            d ^= value.fastCodeAt(i);
+        }
+
+        var result = d & 0x7fffffff;
+        //trace( result );
+        return result;
+    }
+
+    #if static @:generic #end
+    public function make<V>(object:Map<String, V>):Table<Int, V> {
+        var size = 0;
+        for (key in object.keys()) size++;
+        
+        var buckets = [];
+        var keys:Vector<Null<Int>> = new Vector(size);
+        var values:Vector<V> = new Vector(size);
+
+        for (key in object.keys()) {
+            var hash = hash(0, key);
+            var bucketKey = (hash % size).toInt();
+            //trace( key, bucketKey, hash, size, (hash % size).toInt() );
+            if (buckets[bucketKey] == null) {
+                buckets[bucketKey] = [];
+            }
+            buckets[bucketKey].push( key );
+            
+        }
+        
+        //ArraySort.sort( buckets, (a, b) -> a != null && b != null ? b.length - a.length : -1 );
+        ArraySort.sort( buckets, function (a, b) {
+            if (a == null) return 1;
+            if (b == null) return -1;
+            return b.length - a.length;
+        } );
+
+        var i = 0;
+        var bucket = [];
+        
+        while (i < size) {
+            if (buckets[i] == null || buckets[i].length <= 1) break;
+            bucket = buckets[i];
+            //trace( bucket );
+            var d = 1;
+            var item = 0;
+            var slot = 0;
+            var slots = [];
+            var used:Array<Bool> = [];
+
+            while (item < bucket.length) {
+                slot = (hash(d, bucket[item]) % size).toInt();
+                
+                if (values[slot] != null || (#if !static used[slot] != null && #end used[slot] == true)) {
+                    d++;
+                    item = 0;
+                    slots = [];
+                    used = [];
+
+                } else {
+                    used[slot] = true;
+                    slots.push(slot);
+                    item++;
+
+                }
+
+            }
+
+            keys[(hash(0, bucket[0]) % size).toInt()] = d;
+            for (i in 0...bucket.length) {
+                //trace( bucket[i] );
+                values[slots[i]] = object.get(bucket[i]);
+            }
+
+            i++;
+
+        }
+
+        var freelist = [];
+        for (x in 0...size) {
+            if (values[x] == null) {
+                freelist.push(x);
+
+            }
+
+        }
+
+        while (i < size) {
+            if (buckets[i] == null || buckets[i].length == 0) break;
+            var bucket = buckets[i];
+            var slot = freelist.pop();
+            keys[(hash(0, bucket[0]) % size).toInt()] = 0-slot-1;
+            values[slot] = object.get(bucket[0]);
+            i++;
+        }
+        for (i in 0...size) trace( values[i] );
+
+        return {keys: keys, values: values};
+    }
+
+    public function get<V>(table:Table<Int, V>, key:String):V {
+        var d = table.keys[(hash(0, key) % table.keys.length).toInt()];
+        if (d < 0) return table.values[0-d-1];
+        return table.values[(hash(d, key) % table.values.length).toInt()];
+    }
+
+}

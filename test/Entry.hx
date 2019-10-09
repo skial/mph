@@ -1,28 +1,29 @@
-# mph
-Minimal Perfect Hashing
-
-> Based on the article [Throw away the keys: Easy, Minimal Perfect Hashing](http://stevehanov.ca/blog/?id=119).
-
-## Install
-
-- `lix install gh:skial/mph`
-
-## Example
-
-```Haxe
 package ;
 
 import hash.*;
 
+#if js
+@:jsRequire('../index.js')
+extern class MPH {
+    public static function create(obj:{}):Array<Any>;
+    public static function lookup(keys:Array<Int>, values:Array<String>, key:String):String;
+}
+#end
+
 class Entry {
 
     public static function main() {
-        // Test keys and values.
         var map = ['a'=>'A', 'b'=>'B', 'cCCCC'=>'C'];
-        
+        #if js
+        var table = MPH.create({'a':'A', 'b':'B', 'cCCCC':'C'});
+        trace( table );
+        for (key in map.keys()) {
+            trace( 'Looking up the key `$key` => `${map.get(key)}` in `table`, which is ' + MPH.lookup(table[0], table[1], key) );
+        }
+        #end
         var hash = new Mph();
         var table = hash.make(map);
-        trace( table ); // {keys : [-3,null,1], values : [B,A,C]}
+        trace( table );
         
         for (key in map.keys()) {
             trace( 'Looking up the key `$key` => `${map.get(key)}` in `table`, which is ' + hash.get(table, key) );
@@ -40,4 +41,3 @@ class Entry {
     }
 
 }
-```
