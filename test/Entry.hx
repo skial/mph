@@ -22,17 +22,17 @@ class Entry {
         }
         #end
         var hash = new Mph();
-        var table = hash.make(map);
+        var table = hash.make(map, Mph.HashString, 3);
         trace( table );
         
         for (key in map.keys()) {
-            trace( 'Looking up the key `$key` => `${map.get(key)}` in `table`, which is ' + hash.get(table, key) );
+            trace( 'Looking up the key `$key` => `${map.get(key)}` in `table`, which is ' + hash.get(table, key, Mph.HashString) );
         }
 
         // Accessing a non-existent key, depending on platform, 
         // will result in an unexpected error or a false result.
         try {
-            trace( hash.get(table, 'c') );
+            trace( hash.get(table, 'c', Mph.HashString) );
 
         } catch (e:Any) {
             trace( e );

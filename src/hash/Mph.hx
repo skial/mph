@@ -7,6 +7,7 @@ import haxe.ds.ArraySort;
 using haxe.Int32;
 using StringTools;
 
+// Based on
 // @see http://stevehanov.ca/blog/?id=119
 
 typedef Table<Key, Value> = {
@@ -14,33 +15,74 @@ typedef Table<Key, Value> = {
     values:Vector<Value>,
 }
 
+/**
+    Bitwise ops, afaik, _generally_ only work on 32bit ints/ranges? But
+    this doesnt hold for each target, 🤷‍♀️, so the math isnt identical 
+    cross-platform.
+    Which is an issue when you are embedding the table via macros and
+    which is why its typed to `Int32`.
+**/
+
+//
 class Mph {
 
-    public function new() {}
-
-    public function hash(d:Int32, value:String):Int32 {
+    @:nullSafety(Strict) public static function HashString(d:Int32, value:String):Int32 {
         if (d == 0) {
             d =  16777619;
         }
 
         for (i in 0...value.length) {
-            d = ((d * 16777619) ^ value.fastCodeAt(i)) & 2147483647;
+            d = UnsafeHash( d, value.fastCodeAt(i) );
         }
 
         return d;
     }
 
+    @:nullSafety(Strict) public static function HashIterator(d:Int32, values:Iterator<Int32>):Int32 {
+        if (d == 0) {
+            d =  16777619;
+        }
+
+        for (value in values) {
+            d = UnsafeHash( d, value );
+        }
+
+        return d;
+    }
+
+    @:nullSafety(Strict) public static function Hash(d:Int32, value:Int32):Int32 {
+        if (d == 0) {
+            d =  16777619;
+        }
+
+        return UnsafeHash( d, value );
+    }
+
+    @:nullSafety(Strict) public static inline function UnsafeHash(d:Int32, value:Int32):Int32 {
+        return (d * 16777619) ^ value & 2147483647;
+    }
+
+    #if (eval || macro)
+    public static function asExpr<V>(table:hash.Mph.Table<Int, V>):haxe.macro.Expr.ExprOf<hash.Mph.Table<Int, V>> {
+        return macro { 
+            keys:haxe.ds.Vector.fromArrayCopy([ $a{table.keys.toArray().map( k -> macro $v{k} )} ]),
+            values:haxe.ds.Vector.fromArrayCopy([ $a{table.values.toArray().map( k -> macro $v{k} )} ])
+        };
+    }
+    #end
+
+    public function new() {}
+
     #if static @:generic #end
-    public function make<V>(object:Map<String, V>):Table<Int, V> {
-        var size = 0;
-        for (key in object.keys()) size++;
+    public function make<K, V>(object:Map<K, V>, hasher:Int32->K->Int32, size:Int = 0):Table<Int, V> {
+        if (size <= 0) for (key in object.keys()) size++;
         
         var buckets = [];
         var keys:Vector<Null<Int>> = new Vector(size);
         var values:Vector<V> = new Vector(size);
 
         for (key in object.keys()) {
-            var hash = hash(0, key);
+            var hash = hasher(0, key);
             var bucketKey = (hash % size);
             
             if (buckets[bucketKey] == null) {
@@ -70,7 +112,7 @@ class Mph {
             var used:Array<Bool> = [];
 
             while (item < bucket.length) {
-                slot = (hash(d, bucket[item]) % size);
+                slot = (hasher(d, bucket[item]) % size);
                 
                 if (values[slot] != null || (#if !static used[slot] != null && #end used[slot] == true)) {
                     d++;
@@ -87,7 +129,7 @@ class Mph {
 
             }
 
-            keys[(hash(0, bucket[0]) % size)] = d;
+            keys[(hasher(0, bucket[0]) % size)] = d;
 
             for (i in 0...bucket.length) {
                 values[slots[i]] = object.get(bucket[i]);
@@ -111,7 +153,7 @@ class Mph {
             var bucket = buckets[i];
             var slot = freelist.pop();
 
-            keys[(hash(0, bucket[0]) % size)] = 0-slot-1;
+            keys[(hasher(0, bucket[0]) % size)] = 0-slot-1;
             values[slot] = object.get(bucket[0]);
 
             i++;
@@ -121,10 +163,11 @@ class Mph {
         return {keys: keys, values: values};
     }
 
-    public function get<V>(table:Table<Int, V>, key:String):V {
-        var d = table.keys[(hash(0, key) % table.keys.length)];
+    #if static @:generic #end
+    public function get<K, V>(table:Table<Int, V>, key:K, hasher:Int32->K->Int32):V {
+        var d = table.keys[(hasher(0, key) % table.keys.length)];
         if (d < 0) return table.values[0-d-1];
-        return table.values[(hash(d, key) % table.values.length)];
+        return table.values[(hasher(d, key) % table.values.length)];
     }
 
 }

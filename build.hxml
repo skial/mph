@@ -1,7 +1,7 @@
 -cp src
 -cp test
 
--debug
+#-debug
 -dce full
 -D analyzer-optimize
 -main Entry
