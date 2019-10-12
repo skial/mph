@@ -23,6 +23,7 @@ class Entry {
         #end
         var hash = new Mph();
         var table = hash.make(map, Mph.HashString, 3);
+        
         trace( table );
         
         for (key in map.keys()) {
@@ -37,6 +38,16 @@ class Entry {
         } catch (e:Any) {
             trace( e );
 
+        }
+
+        var map = [[1, 2, 3] => 'a', [4] => 'b', [9, 8, 7, 6, 5, 4, 3, 2, 1] => 'c'];
+        var hash = new Mph();
+        var table = hash.make(map, Mph.HashIterable, 3);
+
+        trace( table );
+
+        for (key in map.keys()) {
+            trace( 'Looking up the key `$key` => `${map.get(key)}` in `table`, which is ' + hash.get(table, key, Mph.HashIterable) );
         }
     }
 

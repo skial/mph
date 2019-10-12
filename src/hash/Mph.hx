@@ -50,6 +50,10 @@ class Mph {
         return d;
     }
 
+    @:nullSafety(Strict) public static inline function HashIterable(d:Int32, values:Iterable<Int32>):Int32 {
+        return HashIterator(d, values.iterator());
+    }
+
     @:nullSafety(Strict) public static function Hash(d:Int32, value:Int32):Int32 {
         if (d == 0) {
             d =  16777619;
