@@ -42,7 +42,7 @@ class Mph {
         if (d == 0) {
             d =  16777619;
         }
-
+        
         for (value in values) {
             d = UnsafeHash( d, value );
         }
@@ -77,10 +77,39 @@ class Mph {
 
     public function new() {}
 
+    /**
+        `Mph::build` and `Mph::makes` `if (d%size == 0)` are from
+        @see https://github.com/ChrisTrenkamp/mph/
+
+    **/
+
+    /** 
+        Retries to build table up to `maxAttempts` times.
+        If it fails, it will throw an exception.
+    **/
+    #if static @:generic #end
+    public function build<K, V>(object:Map<K, V>, hasher:Int32->K->Int32, size:Int32 = 0, maxAttempts:Int = 100):Table<Int, V> {
+        var table = null;
+        var loadFactor = 1.0;
+        if (size <= 0) for (key in object.keys()) size++;
+
+        var attempt = 0;
+
+        while (attempt < maxAttempts && table == null) {
+            table = make( object, hasher, size );
+            loadFactor *= 0.9;
+            size = Std.int(size / loadFactor);
+
+        }
+
+        if (table == null) throw 'Unable to build table after $maxAttempts attempts.';
+
+        return table;
+    }
+
     #if static @:generic #end
     public function make<K, V>(object:Map<K, V>, hasher:Int32->K->Int32, size:Int = 0):Table<Int, V> {
         if (size <= 0) for (key in object.keys()) size++;
-        
         var buckets = [];
         var keys:Vector<Null<Int>> = new Vector(size);
         var values:Vector<V> = new Vector(size);
@@ -108,7 +137,7 @@ class Mph {
         while (i < size) {
             if (buckets[i] == null || buckets[i].length <= 1) break;
             bucket = buckets[i];
-
+            
             var d = 1;
             var item = 0;
             var slot = 0;
@@ -124,6 +153,10 @@ class Mph {
                     slots = [];
                     used = [];
 
+                    if (d%size == 0) {
+                        return null;
+                    }
+
                 } else {
                     used[slot] = true;
                     slots.push(slot);
@@ -136,7 +169,7 @@ class Mph {
             keys[(hasher(0, bucket[0]) % size)] = d;
 
             for (i in 0...bucket.length) {
-                values[slots[i]] = object.get(bucket[i]);
+                values[slots[i]] = object.get(bucket[i]); 
             }
 
             i++;

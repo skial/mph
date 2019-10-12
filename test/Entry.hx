@@ -22,8 +22,8 @@ class Entry {
         }
         #end
         var hash = new Mph();
-        var table = hash.make(map, Mph.HashString, 3);
-        
+        var table = hash.build(map, Mph.HashString, 3);
+
         trace( table );
         
         for (key in map.keys()) {
@@ -40,9 +40,11 @@ class Entry {
 
         }
 
-        var map = [[1, 2, 3] => 'a', [4] => 'b', [9, 8, 7, 6, 5, 4, 3, 2, 1] => 'c'];
+        var map = [[1, 2, 3] => 'a', [4] => 'b', [9, 8, 7, 6, 5, 99999999, 3, 2, 1] => 'c', [8, 7, 6, 5, 4, 3, 2, 1] => 'h',
+        [7, 6, 5, 4, 3, 2, 1] => 'd', [6, 5, 4, 3, 2, 1] => 'e', [5, 4, 3, 2, 1] => 'f', [4, 3, 2, 1] => 'g', /*[3, 2, 1] => 'h',*/ [2, 1] => 'c', [1] => 'i',
+        ];
         var hash = new Mph();
-        var table = hash.make(map, Mph.HashIterable, 3);
+        var table = hash.build(map, Mph.HashIterable);
 
         trace( table );
 

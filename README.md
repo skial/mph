@@ -19,7 +19,7 @@ class Entry {
     public static function main() {
         var map = ['a'=>'A', 'b'=>'B', 'cCCCC'=>'C'];
         var hash = new Mph();
-        var table = hash.make(map, Mph.HashString, 3);
+        var table = hash.build(map, Mph.HashString, 3);
         
         for (key in map.keys()) {
             trace( 'Looking up the key `$key` => `${map.get(key)}` in `table`, which is ' + hash.get(table, key, Mph.HashString) );
