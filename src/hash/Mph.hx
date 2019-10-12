@@ -99,7 +99,8 @@ class Mph {
             table = make( object, hasher, size );
             loadFactor *= 0.9;
             size = Std.int(size / loadFactor);
-
+            
+            attempt++;
         }
 
         if (table == null) throw 'Unable to build table after $maxAttempts attempts.';
