@@ -4,6 +4,7 @@ import hash.Mph;
 import tink.unit.Assert.*;
 
 using StringTools;
+using tink.CoreApi;
 
 @:asserts
 class MphSpec {
@@ -137,6 +138,25 @@ class MphSpec {
         } catch (e:Any) {
             trace(e);
             return asserts.fail('' + e);
+        }
+
+        return asserts.done();
+    }
+
+    public function testContainerCasting() {
+        var left = ['a', 'b', 'c'];
+        var right = ['AAA', 'BBB', 'CCC'];
+        var pair:Pair<Array<String>, Array<String>> = new Pair(left, right);
+
+        var mph = new Mph();
+        var table = mph.build(pair, hash.Mph.HashString, left.length, 5);
+        asserts.assert( table.keys.length >= left.length );
+        asserts.assert( table.keys.length == table.values.length );
+
+        for (i in 0...left.length) {
+            var key = left[i];
+            var value = right[i];
+            asserts.assert( mph.get(table, key, hash.Mph.HashString) == value );
         }
 
         return asserts.done();

@@ -7,18 +7,70 @@ import haxe.ds.ArraySort;
 using haxe.Int32;
 using StringTools;
 
-// Based on
-// @see http://stevehanov.ca/blog/?id=119
+/**
+    Based on
+    @see http://stevehanov.ca/blog/?id=119
+**/
 
 typedef Table<Key, Value> = {
     keys:Vector<Null<Key>>,
     values:Vector<Value>,
 }
 
+typedef Access<Key, Value> = {
+    function get(key:Key):Null<Value>;
+    function keys():Iterator<Key>;
+}
+
+@:forward
+@:forwardStatics
+abstract Container<Key, Value>(Access<Key, Value>) from Access<Key, Value>{
+
+    public inline function new(v) this = v;
+
+    @:from public static inline function fromMap<K, V>(v:haxe.Constraints.IMap<K, V>):Container<K, V> {
+        return new Container(v);
+    }
+
+    #if tink_core
+    @:from public static inline function fromTinkPair<K, V>(v:tink.core.Pair<Array<K>, Array<V>>):Container<K, V> {
+        return fromPair(cast v);
+    }
+    #end
+
+    @:from public static inline function fromPair<K, V>(v:{a:Array<K>, b:Array<V>}):Container<K, V> {
+        if (v.a.length != v.b.length) throw 'Array lengths must match.';
+        return new Container(new ArrayWrap(v.a, v.b));
+    }
+
+}
+
+private class ArrayWrap<Key, Value> {
+
+    public var _keys:Array<Key> = [];
+    public var values:Array<Value> = [];
+
+    public function new(a:Array<Key>, b:Array<Value>) {
+        _keys = a;
+        values = b;
+    }
+
+    public function keys():Iterator<Key> {
+        return _keys.iterator();
+    }
+
+    public function get(key:Key):Null<Value> {
+        var keyIndex = _keys.indexOf(key);
+        if (keyIndex == -1) return null;
+        return values[keyIndex];
+    }
+
+}
+
 /**
     Bitwise ops, afaik, _generally_ only work on 32bit ints/ranges? But
     this doesnt hold for each target, 🤷‍♀️, so the math isnt identical 
-    cross-platform.
+    cross-platform using `Int`.
     Which is an issue when you are embedding the table via macros and
     which is why its typed to `Int32`.
 **/
@@ -101,7 +153,7 @@ class Mph {
         If it fails, it will throw an exception.
     **/
     #if static @:generic #end
-    public function build<K, V>(object:Map<K, V>, hasher:Int32->K->Int32, size:Int32 = 0, maxAttempts:Int = 100):Table<Int, V> {
+    public function build<K, V>(object:Container<K, V>, hasher:Int32->K->Int32, size:Int32 = 0, maxAttempts:Int = 100):Table<Int, V> {
         var table = null;
         var loadFactor = 1.0;
         if (size <= 0) for (key in object.keys()) size++;
@@ -122,7 +174,7 @@ class Mph {
     }
 
     #if static @:generic #end
-    public function make<K, V>(map:Map<K, V>, hasher:Int32->K->Int32, size:Int = 0):Table<Int, V> {
+    public function make<K, V>(map:Container<K, V>, hasher:Int32->K->Int32, size:Int = 0):Table<Int, V> {
         if (size <= 0) for (key in map.keys()) size++;
         var buckets = [];
         var keys:Vector<Null<Int>> = new Vector(size);
