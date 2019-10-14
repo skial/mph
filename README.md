@@ -38,3 +38,9 @@ class Entry {
 
 }
 ```
+
+### Notes
+
+Help from:
+    - [perfect](https://github.com/mixu/perfect)
+    - [mph](https://github.com/ChrisTrenkamp/mph)
