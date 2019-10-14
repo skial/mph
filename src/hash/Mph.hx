@@ -38,6 +38,18 @@ class Mph {
         return d;
     }
 
+    @:nullSafety(Strict) public static function HashArray(d:Int32, values:Array<Int32>):Int32 {
+        if (d == 0) {
+            d =  16777619;
+        }
+        
+        for (i in 0...values.length) {
+            d = UnsafeHash( d, values[i] );
+        }
+
+        return d;
+    }
+
     @:nullSafety(Strict) public static function HashIterator(d:Int32, values:Iterator<Int32>):Int32 {
         if (d == 0) {
             d =  16777619;
@@ -67,10 +79,11 @@ class Mph {
     }
 
     #if (eval || macro)
-    public static function asExpr<V>(table:hash.Mph.Table<Int, V>):haxe.macro.Expr.ExprOf<hash.Mph.Table<Int, V>> {
+    public static function asExpr<V>(table:hash.Mph.Table<Int, V>, ?valueExpr:V->haxe.macro.Expr):haxe.macro.Expr.ExprOf<hash.Mph.Table<Int, V>> {
+        if (valueExpr == null) valueExpr = v -> macro $v{v};
         return macro { 
             keys:haxe.ds.Vector.fromArrayCopy([ $a{table.keys.toArray().map( k -> macro $v{k} )} ]),
-            values:haxe.ds.Vector.fromArrayCopy([ $a{table.values.toArray().map( k -> macro $v{k} )} ])
+            values:haxe.ds.Vector.fromArrayCopy([ $a{table.values.toArray().map( k -> valueExpr(k) )} ])
         };
     }
     #end
@@ -109,13 +122,13 @@ class Mph {
     }
 
     #if static @:generic #end
-    public function make<K, V>(object:Map<K, V>, hasher:Int32->K->Int32, size:Int = 0):Table<Int, V> {
-        if (size <= 0) for (key in object.keys()) size++;
+    public function make<K, V>(map:Map<K, V>, hasher:Int32->K->Int32, size:Int = 0):Table<Int, V> {
+        if (size <= 0) for (key in map.keys()) size++;
         var buckets = [];
         var keys:Vector<Null<Int>> = new Vector(size);
         var values:Vector<V> = new Vector(size);
 
-        for (key in object.keys()) {
+        for (key in map.keys()) {
             var hash = hasher(0, key);
             var bucketKey = (hash % size);
             
@@ -124,6 +137,10 @@ class Mph {
             }
 
             buckets[bucketKey].push( key );
+
+            if (buckets[bucketKey].length > size/2) {
+                return null;
+            }
             
         }
 
@@ -135,31 +152,29 @@ class Mph {
 
         var i = 0;
         var bucket = [];
+
         while (i < size) {
-            if (buckets[i] == null || buckets[i].length <= 1) break;
             bucket = buckets[i];
+            if (bucket == null || buckets.length == 0) break;
             
             var d = 1;
             var item = 0;
             var slot = 0;
-            var slots = [];
-            var used:Array<Bool> = [];
+            var slots:Array<Int> = [];
 
             while (item < bucket.length) {
-                slot = (hasher(d, bucket[item]) % size);
+                slot = hasher(d, bucket[item]) % size;
                 
-                if (values[slot] != null || (#if !static used[slot] != null && #end used[slot] == true)) {
+                if (values[slot] != null || slots.indexOf(slot) > -1) {
                     d++;
                     item = 0;
                     slots = [];
-                    used = [];
 
-                    if (d%size == 0) {
+                    if (d % size == 0) {
                         return null;
                     }
 
                 } else {
-                    used[slot] = true;
                     slots.push(slot);
                     item++;
 
@@ -170,7 +185,7 @@ class Mph {
             keys[(hasher(0, bucket[0]) % size)] = d;
 
             for (i in 0...bucket.length) {
-                values[slots[i]] = object.get(bucket[i]); 
+                values[slots[i]] = map.get(bucket[i]); 
             }
 
             i++;
@@ -192,7 +207,7 @@ class Mph {
             var slot = freelist.pop();
 
             keys[(hasher(0, bucket[0]) % size)] = 0-slot-1;
-            values[slot] = object.get(bucket[0]);
+            values[slot] = map.get(bucket[0]);
 
             i++;
 

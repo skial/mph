@@ -8,5 +8,7 @@
     "releasenote": "Initial Release",
     "version": "0.0.1-alpha",
     "url": "https://github.com/skial/mp",
-    "dependencies": {}
+    "dependencies": {
+      "unifill": "git:https://github.com/skial/unifill#655e4e7f9e78fb8c7128487794d573cb9ddfe48f"
+    }
   }
