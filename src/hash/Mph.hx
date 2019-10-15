@@ -83,9 +83,16 @@ class Mph {
             d =  16777619;
         }
 
+        #if (neko && unifill)
+        var length = unifill.Unifill.uLength(value);
+        for (i in 0...length) {
+            d = UnsafeHash( d, unifill.Unifill.uCharCodeAt(value, i) );
+        }
+        #else
         for (i in 0...value.length) {
             d = UnsafeHash( d, value.fastCodeAt(i) );
         }
+        #end
 
         return d;
     }
